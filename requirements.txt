@@ -1,0 +1,24 @@
+# NeuroTrace Core Dependencies
+torch>=2.0.0
+nibabel>=5.0.0
+numpy>=1.24.0
+scipy>=1.10.0
+scikit-image>=0.20.0
+
+# User Interface and Visualization
+streamlit>=1.30.0
+plotly>=5.18.0
+
+# Data Contracts and Validation
+pydantic>=2.0.0
+
+# Research Reporting
+reportlab>=4.0.0
+
+# Agentic AI Copilot (Gemma 4 / Gemini API)
+google-genai>=0.1.0
+requests>=2.28.0
+
+# Testing and QA
+pytest>=8.0.0
+
