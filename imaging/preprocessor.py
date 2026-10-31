@@ -39,6 +39,6 @@ def to_input_tensor(normalized_image: np.ndarray, device: str = "cpu") -> torch.
         raise ValueError(f"Expected 3D array (D, H, W), got {normalized_image.ndim}D array with shape {normalized_image.shape}")
         
     # Shape transformation: (D, H, W) -> (1, 1, D, H, W)
-    tensor = torch.from_numpy(normalized_image[None, None].astype(np.float32))
+    arr = np.ascontiguousarray(normalized_image[None, None], dtype=np.float32)
+    tensor = torch.from_numpy(arr)
     return tensor.to(device)
-
