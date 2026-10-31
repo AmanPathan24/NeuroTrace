@@ -21,3 +21,4 @@ requests>=2.28.0
 
 # Testing and QA
 pytest>=8.0.0
+

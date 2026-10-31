@@ -257,3 +257,4 @@ neurotrace/
 - `develop` branch created from `main`.
 - `feature/phase-0-repository-audit` branch created and active.
 - Commit planned: `docs: complete Phase 0 reconnaissance and model integration contract`
+
