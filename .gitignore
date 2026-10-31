@@ -1,5 +1,53 @@
-BRATS/
+# Environment variables
+.env
+.env.*
+!.env.example
+
+# Python cache & virtual environments
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+ENV/
+
+# Large model checkpoints and weights (Protected)
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.h5
+*.hdf5
 Flairbased_2/
 models/
-NeuroTrace_Antigravity_Pack/
+
+# Protected Medical Imaging and Patient Data (Protected)
+*.nii
+*.nii.gz
+*.nrrd
+*.mha
+BRATS/
+data/*
+!data/.gitkeep
+
+# Reference materials and packs (Preserved locally, not committed)
 reference_material/
+NeuroTrace_Antigravity_Pack/
+NeuroTrace_Antigravity_Starter_Pack/
+
+# Generated reports, exports and artifacts
+reports/
+artifacts/
+*.pdf
+*.png
+*.jpg
+*.jpeg
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
