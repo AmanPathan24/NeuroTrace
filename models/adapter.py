@@ -1,5 +1,6 @@
 """Inference adapter for NeuroSegNet 3D U-Net brain tumor segmentation."""
 import os
+import gc
 import time
 import uuid
 import hashlib
@@ -55,32 +56,42 @@ class NeuroSegNetAdapter:
         return hasher.hexdigest()
 
     def _load_checkpoint(self) -> None:
-        """Safely load and verify the PyTorch checkpoint weights."""
+        """
+        Load trained weights from checkpoint using strict state_dict verification.
+        Handles DataParallel 'module.' prefix stripping if present.
+        """
         if not self.checkpoint_path.exists():
             raise CorruptedFileError(
-                f"Model checkpoint not found at: {self.checkpoint_path.resolve()}"
+                f"Checkpoint file '{self.checkpoint_path}' does not exist."
             )
 
         self.checkpoint_hash = self._compute_file_sha256(self.checkpoint_path)
 
         try:
             checkpoint = torch.load(
-                self.checkpoint_path, map_location=self.device, weights_only=False
+                self.checkpoint_path,
+                map_location=self.device,
+                weights_only=False,
             )
         except Exception as e:
             raise CorruptedFileError(
                 f"Failed to load PyTorch checkpoint from {self.checkpoint_path}: {e}"
             ) from e
 
-        if not isinstance(checkpoint, dict) or "model_state_dict" not in checkpoint:
-            raise CorruptedFileError(
-                f"Invalid checkpoint format. Expected dictionary with 'model_state_dict', got {type(checkpoint)}"
-            )
-
         # Extract training metadata if present
-        self.epoch = checkpoint.get("epoch")
-        self.val_loss = checkpoint.get("val_loss")
-        self.val_dice = checkpoint.get("val_dice")
+        if isinstance(checkpoint, dict):
+            self.epoch = checkpoint.get("epoch")
+            self.val_loss = checkpoint.get("val_loss")
+            self.val_dice = checkpoint.get("val_dice")
+            state_dict = checkpoint.get("model_state_dict", checkpoint)
+        else:
+            state_dict = checkpoint
+
+        # Strip DataParallel 'module.' prefix if present
+        cleaned_state_dict = OrderedDict()
+        for k, v in state_dict.items():
+            name = k[7:] if k.startswith("module.") else k
+            cleaned_state_dict[name] = v
 
         # Instantiate verified architecture: 1 input channel, 2 output classes, 8 base filters
         self.model = UNet3D(
@@ -88,35 +99,35 @@ class NeuroSegNetAdapter:
             out_channels=2,
             base_filters=8,
             dropout=0.2,
-        ).to(self.device)
-
-        # Strip DataParallel 'module.' prefix if present
-        state_dict = checkpoint["model_state_dict"]
-        clean_state_dict = OrderedDict()
-        for k, v in state_dict.items():
-            clean_key = k.replace("module.", "")
-            clean_state_dict[clean_key] = v
+        )
 
         try:
-            incompatible = self.model.load_state_dict(clean_state_dict, strict=True)
-            if incompatible.missing_keys or incompatible.unexpected_keys:
+            missing_keys, unexpected_keys = self.model.load_state_dict(
+                cleaned_state_dict, strict=True
+            )
+            if missing_keys or unexpected_keys:
                 raise CorruptedFileError(
-                    f"Checkpoint architecture mismatch! Missing: {incompatible.missing_keys}, Unexpected: {incompatible.unexpected_keys}"
+                    f"Checkpoint key mismatch: missing={missing_keys}, unexpected={unexpected_keys}"
                 )
         except Exception as e:
-            raise CorruptedFileError(f"Failed to load state dict into UNet3D: {e}") from e
+            raise CorruptedFileError(
+                f"Strict state_dict loading failed for {self.checkpoint_path}: {e}"
+            ) from e
 
+        self.model.to(self.device)
         self.model.eval()
 
     def predict(
-        self, raw_volume: np.ndarray, study_id: str = "study_unknown"
+        self,
+        raw_volume: np.ndarray,
+        study_id: str = "unknown_study",
     ) -> Tuple[np.ndarray, PredictionMetadata]:
         """
-        Execute deterministic brain tumor segmentation on an input 3D MRI volume.
+        Execute deterministic 3D segmentation inference on a raw brain MRI volume.
         
         Args:
-            raw_volume: 3D numpy array of FLAIR brain MRI.
-            study_id: Study identifier for lineage tracking.
+            raw_volume: 3D numpy array of raw FLAIR intensities (D, H, W).
+            study_id: Identifier of the study for provenance tracking.
             
         Returns:
             Tuple of:
@@ -145,6 +156,10 @@ class NeuroSegNetAdapter:
                 pred_tensor = torch.argmax(logits, dim=1).squeeze()
                 pred_mask = pred_tensor.cpu().numpy().astype(np.uint8)
             inference_duration = time.perf_counter() - start_time
+
+            # Clean up intermediate memory aggressively
+            del logits, pred_tensor, input_tensor, normalized
+            gc.collect()
 
             # 4. Create metadata
             prediction_id = f"pred_{uuid.uuid4().hex[:8]}"
@@ -186,4 +201,3 @@ class NeuroSegNetAdapter:
             "output_channels": 2,
             "base_filters": 8,
         }
-
