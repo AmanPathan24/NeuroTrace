@@ -131,6 +131,7 @@ def generate_research_pdf_report(
     raw_volume: Optional[np.ndarray] = None,
     pred_mask: Optional[np.ndarray] = None,
     output_path: Optional[Union[str, Path]] = None,
+    copilot_model: str = "gemma-4-31b-it",
 ) -> Path:
     """
     Generate an exhaustive, publication-grade research PDF report containing study metadata,
@@ -453,7 +454,7 @@ def generate_research_pdf_report(
         story.append(Spacer(1, 10))
 
     # 7. Gemma 4 AI Research Commentary
-    story.append(Paragraph("6. AI Research Assistant Commentary (Gemma 4)", section_h1))
+    story.append(Paragraph(f"6. AI Research Assistant Commentary (Google Gemma 4 — {copilot_model})", section_h1))
     commentary_text = ai_commentary or (
         f"Automated quantitative analysis of study {study.metadata.study_id} completed successfully. "
         f"NeuroSegNet 3D U-Net delineated a segmented tumor lesion of {metrics.physical_volume_cm3:.2f} mL "
@@ -463,7 +464,7 @@ def generate_research_pdf_report(
     commentary_box = [
         [
             Paragraph(
-                f"<b>Attributed AI Commentary (Gemma 4 Copilot — Grounded in deterministic metrics):</b><br/>"
+                f"<b>Attributed AI Commentary (Google Gemma 4 Copilot [{copilot_model}] — Grounded in deterministic metrics):</b><br/>"
                 f"{commentary_text}",
                 ai_body_style,
             )
