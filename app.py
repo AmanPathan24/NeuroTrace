@@ -223,6 +223,31 @@ with st.sidebar:
                 st.error(f"Segmentation failed: {e}")
 
     st.divider()
+    st.markdown("#### 3. Gemma 4 Copilot Config")
+    selected_gemma = st.selectbox(
+        "Gemma 4 Model:",
+        ["gemma-4-31b-it", "gemma-4-26b-a4b-it"],
+        index=0,
+        help="Supported models:\n• gemma-4-31b-it (31B Dense)\n• gemma-4-26b-a4b-it (26B MoE with 4B active)",
+    )
+    copilot.set_model(selected_gemma)
+
+    api_key_input = st.text_input(
+        "Gemini API Key (Optional):",
+        value=settings.gemini_api_key or "",
+        type="password",
+        help="Optional API key for live Google GenAI queries. If omitted, uses local deterministic grounding.",
+    )
+    if api_key_input != (copilot.api_key or ""):
+        copilot.set_api_key(api_key_input)
+
+    status = copilot.get_copilot_status()
+    if status["is_online"]:
+        st.success(f"🟢 Gemma 4 Online (`{selected_gemma}`)")
+    else:
+        st.info(f"🟡 Local Grounding Mode (`{selected_gemma}`)")
+
+    st.divider()
     st.caption("NeuroTrace v1.0 • Research Platform")
 
 # ----------------- MAIN WORKSPACE -----------------
@@ -428,10 +453,17 @@ with tabs[3]:
 
 # ----- TAB 5: Gemma 4 Research Copilot -----
 with tabs[4]:
-    st.markdown("### Gemma 4 Research Copilot")
+    st.markdown("### 🤖 Google Gemma 4 Research Copilot")
+    st.caption(
+        f"Active Model: `{copilot.model_name}` | Mode: **{'Live GenAI API Connected' if copilot.client else 'Local Deterministic Tool Grounding (Zero Hallucination)'}**"
+    )
     st.markdown(
-        "Ask questions grounded in the verified quantitative evidence. "
-        "The agent has access only to allowlisted computational tools and never hallucinates numbers."
+        '<div style="background-color: rgba(14, 165, 233, 0.08); border-left: 3px solid #0284c7; padding: 10px 14px; border-radius: 4px; margin-bottom: 12px; font-size: 0.85rem;">'
+        '<b>Gemma 4 Evidence Grounding Architecture</b>: Powered by Google Gemma 4 (<code>gemma-4-31b-it</code> / <code>gemma-4-26b-a4b-it</code>). '
+        'The agent interacts strictly with allowlisted computational tools (<code>calculate_tumor_volumes</code>, <code>inspect_segmentation_quality</code>, <code>validate_mri_study</code>). '
+        'All reported measurements originate from physical voxel geometries—preventing numerical hallucination and ensuring local MRI privacy.'
+        '</div>',
+        unsafe_allow_html=True,
     )
 
     quick_prompts = [
@@ -485,6 +517,7 @@ with tabs[5]:
                         ai_commentary=copilot.synthesize_research_summary(study.metadata.study_id),
                         raw_volume=raw_vol,
                         pred_mask=pred_mask,
+                        copilot_model=copilot.model_name,
                     )
                     with open(pdf_path, "rb") as f:
                         pdf_bytes = f.read()

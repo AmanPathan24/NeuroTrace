@@ -2,7 +2,7 @@
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 from pydantic import BaseModel, Field
 
 # Base directory is the workspace root
@@ -33,11 +33,15 @@ class Settings(BaseModel):
     dropout: float = 0.2
     
     # Supported Modalities
-    supported_modalities: list[str] = Field(default_factory=lambda: ["flair"])
+    supported_modalities: List[str] = Field(default_factory=lambda: ["flair"])
     
     # Gemma 4 / Gemini API Config
+    # Supported Gemma 4 models: 'gemma-4-31b-it', 'gemma-4-26b-a4b-it'
     gemini_api_key: Optional[str] = Field(default=None)
-    gemma_model_id: str = Field(default="gemini-2.5-flash")
+    gemma_model_id: str = Field(default="gemma-4-31b-it")
+    available_gemma_models: List[str] = Field(
+        default_factory=lambda: ["gemma-4-31b-it", "gemma-4-26b-a4b-it"]
+    )
     
     # Streamlit Config
     server_port: int = 8501
@@ -61,14 +65,14 @@ class Settings(BaseModel):
             data_path = BASE_DIR / data_path
             
         api_key = os.getenv("GEMINI_API_KEY") or os.getenv("API_KEY")
-        gemma_model = os.getenv("GEMMA_MODEL_ID", "gemini-2.5-flash")
+        gemma_model = os.getenv("GEMMA_MODEL_ID", "gemma-4-31b-it")
         
         return cls(
             default_checkpoint=checkpoint_path,
             data_dir=data_path,
             device=device,
             gemini_api_key=api_key,
-            gemma_model_id=gemma_model
+            gemma_model_id=gemma_model,
         )
 
 
@@ -76,4 +80,3 @@ class Settings(BaseModel):
 def get_settings() -> Settings:
     """Return cached singleton instance of Settings."""
     return Settings.load_from_env()
-
