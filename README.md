@@ -28,7 +28,7 @@ NeuroTrace is an open-source, research-grade computational neuroimaging analysis
 
 ### 2. NeuroSegNet 3D U-Net Inference Engine
 - Powered by a verified pretrained **3D U-Net** (`1,413,250` parameters, 8 base filters, 1 input channel, 2 output classes).
-- Production checkpoint: `Flairbased_2/model_epoch_45 (1).pt` (validation loss `0.1756`, peak tumor validation Dice `0.4622`).
+- Production checkpoint: `Flairbased_2/model_epoch_45 (1).pt` (validation loss `0.1756`, peak tumor validation Dice `0.8722`).
 - Runs full-volume `(240, 240, 155)` inference on CPU in **~12–15 seconds** without requiring CUDA or GPU hardware.
 - Exports binary segmentation masks as `.nii.gz` while strictly preserving the reference scan's spatial affine and coordinate frame.
 
