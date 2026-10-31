@@ -4,7 +4,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c.svg)](https://pytorch.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.30%2B-ff4b4b.svg)](https://streamlit.io/)
 [![Plotly](https://img.shields.io/badge/Plotly-5.18%2B-3f4f75.svg)](https://plotly.com/)
-[![Tests](https://img.shields.io/badge/tests-41%20passed%20%7C%20100%25-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-46%20passed%20%7C%20100%25-brightgreen.svg)](tests/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **"NeuroTrace — From segmentation to evidence."**
@@ -213,13 +213,31 @@ pytest -v tests/integration/
 
 ---
 
-## 💻 Running the NeuroTrace Application
+## 💻 Running NeuroTrace (Two User Interfaces Available)
 
-Launch the Streamlit research interface:
+NeuroTrace offers two full user interfaces:
+
+### Option A: Modern React Web Application (Flask Backend)
+A publication-shaped, modern React 18 frontend with interactive multi-planar scrubbers, Plotly WebGL 3D volume isosurface rendering, live 3D U-Net CPU inference, and Gemma 4 research assistant integration:
+
+```bash
+python flask_app.py
+```
+Open **http://localhost:5000** in your browser.
+
+- **Workspace 2D**: Synchronized Axial, Coronal, and Sagittal scrubbers with live overlay contours and mask blending.
+- **Workspace 3D**: Toggle between hardware-accelerated Plotly WebGL 3D isosurface rendering and CSS MPR projection.
+- **Live Gemma 4 Copilot**: Chat with `gemma-4-31b-it` or `gemma-4-26b-a4b-it` grounded on deterministic analysis with allowlisted tool-call traces.
+- **Instant Pre-loaded Benchmarks**: One-click test with repository clinical scans (`BraTS20_Training_001_flair.nii`, `BraTS20_Training_030_flair.nii`).
+- **Publication Exports**: One-click download for signed ReportLab PDF reports and geometry-preserving `.nii.gz` segmentation masks.
+
+### Option B: Classic Streamlit Dashboard
+The original multi-tab Streamlit medical research dashboard:
 
 ```bash
 streamlit run app.py
 ```
+Open **http://localhost:8501** in your browser.
 
 ### User Workflow:
 1. **Upload MRI Scan**: Drag and drop a FLAIR NIfTI scan (`.nii` or `.nii.gz`) or select one of the built-in reference BraTS volumes.

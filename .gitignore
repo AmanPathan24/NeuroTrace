@@ -37,7 +37,6 @@ data/*
 reference_material/
 NeuroTrace_Antigravity_Pack/
 NeuroTrace_Antigravity_Starter_Pack/
-ui_reference/
 
 # Generated reports, exports and artifacts
 reports/

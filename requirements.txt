@@ -7,6 +7,8 @@ scikit-image>=0.20.0
 
 # User Interface and Visualization
 streamlit>=1.30.0
+flask>=3.0.0
+flask-cors>=4.0.0
 plotly>=5.18.0
 
 # Data Contracts and Validation
