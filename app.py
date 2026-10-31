@@ -4,10 +4,18 @@ Main Streamlit Application.
 import io
 import os
 import glob
+import gzip
+import inspect
+import tempfile
 from pathlib import Path
 from typing import Optional, Tuple
 import numpy as np
+import nibabel as nib
 import streamlit as st
+
+# Forward and backward compatible stretch width kwargs for Streamlit
+HAS_WIDTH_ARG = "width" in inspect.signature(st.button).parameters
+STRETCH_KW = {"width": "stretch"} if HAS_WIDTH_ARG else {"use_container_width": True}
 
 # Configure page settings
 st.set_page_config(
@@ -142,7 +150,7 @@ with st.sidebar:
             "Upload Brain MRI Scan", type=["nii", "gz"], help="Supports .nii and .nii.gz"
         )
 
-    load_btn = st.button("📥 Load & Validate MRI", use_container_width=True)
+    load_btn = st.button("📥 Load & Validate MRI", **STRETCH_KW)
 
     if load_btn:
         try:
@@ -183,7 +191,7 @@ with st.sidebar:
     st.markdown(f"- **Device**: `{model_info['device'].upper()}`")
 
     if st.session_state.study is not None:
-        seg_btn = st.button("🚀 Run NeuroSegNet Segmentation", type="primary", use_container_width=True)
+        seg_btn = st.button("🚀 Run NeuroSegNet Segmentation", type="primary", **STRETCH_KW)
         if seg_btn:
             try:
                 with st.spinner("Executing 3D U-Net inference on CPU..."):
@@ -327,7 +335,7 @@ with tabs[0]:
         st.markdown(f"**Intensity Range**: `[{study.intensity_stats.min_value:.1f}, {study.intensity_stats.max_value:.1f}]` (Mean: `{study.intensity_stats.mean_value:.1f}`)")
 
     st.markdown("#### Affine Transformation Matrix (4×4)")
-    st.dataframe(np.array(study.affine_matrix), use_container_width=True)
+    st.dataframe(np.array(study.affine_matrix), **STRETCH_KW)
 
 # ----- TAB 2: 2D Multi-Planar Viewer -----
 with tabs[1]:
@@ -475,7 +483,7 @@ with tabs[4]:
     selected_prompt = None
     for i, qp in enumerate(quick_prompts):
         with qp_cols[i]:
-            if st.button(qp, key=f"qp_{i}", use_container_width=True):
+            if st.button(qp, key=f"qp_{i}", **STRETCH_KW):
                 selected_prompt = qp
 
     # Display chat history
@@ -533,23 +541,19 @@ with tabs[5]:
             st.markdown("#### 📦 NIfTI Mask & JSON Analysis Bundle")
             st.markdown("Export the spatially aligned binary segmentation mask as a compressed NIfTI file (`.nii.gz`) preserving native affine coordinates.")
 
-            # Export NIfTI mask
-            with tempfile.NamedTemporaryFile(suffix=".nii.gz", delete=False) as tmp_nii:
-                tmp_nii_path = tmp_nii.name
-
-            export_segmentation_nifti(
-                mask=pred_mask,
-                reference_nii=st.session_state.nii_img,
-                output_path=tmp_nii_path,
+            # Export NIfTI mask purely in-memory preserving native affine and geometry
+            new_header = st.session_state.nii_img.header.copy()
+            new_header.set_data_dtype(np.uint8)
+            seg_nii = nib.Nifti1Image(
+                dataobj=pred_mask.astype(np.uint8),
+                affine=st.session_state.nii_img.affine,
+                header=new_header,
             )
-            with open(tmp_nii_path, "rb") as f:
-                nii_bytes = f.read()
-            if os.path.exists(tmp_nii_path):
-                os.remove(tmp_nii_path)
+            compressed_nii_bytes = gzip.compress(seg_nii.to_bytes())
 
             st.download_button(
                 label="⬇️ Download Segmentation Mask (.nii.gz)",
-                data=nii_bytes,
+                data=compressed_nii_bytes,
                 file_name=f"segmentation_{study.metadata.study_id}.nii.gz",
                 mime="application/gzip",
             )
