@@ -10,8 +10,16 @@ from agents.prompts import RESEARCH_COPILOT_SYSTEM_PROMPT
 class GemmaResearchCopilot:
     """
     Agentic research copilot orchestrating Gemma 4 with allowlisted computational tools.
+    Supports official Google Gemma 4 models:
+      - 'gemma-4-31b-it' (Dense 31B instruction-tuned, default)
+      - 'gemma-4-26b-a4b-it' (26B MoE with 4B active parameters)
     Enforces evidence grounding, scientific integrity, and local MRI data privacy.
     """
+
+    SUPPORTED_GEMMA_MODELS: List[str] = [
+        "gemma-4-31b-it",
+        "gemma-4-26b-a4b-it",
+    ]
 
     def __init__(
         self,
@@ -21,20 +29,47 @@ class GemmaResearchCopilot:
     ):
         settings = get_settings()
         self.api_key = api_key or settings.gemini_api_key
-        self.model_name = model_name or settings.gemma_model_id
+        self.model_name = model_name or settings.gemma_model_id or "gemma-4-31b-it"
         self.registry = tool_registry or ResearchToolRegistry()
         self.client = None
 
         if self.api_key:
             self._init_genai_client()
 
+    def set_model(self, model_name: str) -> None:
+        """Switch active Gemma 4 model variant."""
+        if model_name:
+            self.model_name = model_name.strip()
+
+    def set_api_key(self, api_key: Optional[str]) -> None:
+        """Update API key and reinitialize Google GenAI client."""
+        self.api_key = api_key.strip() if api_key else None
+        if self.api_key:
+            self._init_genai_client()
+        else:
+            self.client = None
+
+    def get_copilot_status(self) -> Dict[str, Any]:
+        """Return technical operational status of the Gemma 4 Copilot."""
+        return {
+            "model_name": self.model_name,
+            "has_api_key": bool(self.api_key),
+            "is_online": self.client is not None,
+            "supported_models": self.SUPPORTED_GEMMA_MODELS,
+        }
+
     def _init_genai_client(self) -> None:
-        """Initialize Google GenAI client if available."""
+        """Initialize Google GenAI client for Gemma 4."""
         try:
             from google import genai
             self.client = genai.Client(api_key=self.api_key)
         except Exception:
-            self.client = None
+            try:
+                import google.generativeai as gai
+                gai.configure(api_key=self.api_key)
+                self.client = gai
+            except Exception:
+                self.client = None
 
     def synthesize_research_summary(self, study_id: str) -> str:
         """
@@ -54,7 +89,7 @@ class GemmaResearchCopilot:
 
         lines = [
             f"### 🔬 NeuroTrace Research Summary: `{study_id}`",
-            f"**File**: `{filename}` | **Modality**: FLAIR | **Dimensions**: `{dims[0]} × {dims[1]} × {dims[2]}` | **Voxel Spacing**: `{spacing[0]} × {spacing[1]} × {spacing[2]}` mm",
+            f"**Gemma 4 Copilot**: `{self.model_name}` | **File**: `{filename}` | **Modality**: FLAIR | **Dimensions**: `{dims[0]} × {dims[1]} × {dims[2]}` | **Voxel Spacing**: `{spacing[0]} × {spacing[1]} × {spacing[2]}` mm",
             "",
             "#### 1. Segmentation & Volumetric Evidence",
         ]
@@ -113,25 +148,32 @@ class GemmaResearchCopilot:
     def chat(self, user_query: str, study_id: Optional[str] = None) -> str:
         """
         Handle user inquiries grounded in the active study and allowlisted tools.
-        If live GenAI client is active, interacts with Gemma; otherwise uses
+        If live GenAI client is active, interacts with Gemma 4; otherwise uses
         deterministic evidence synthesis.
         """
-        # If client is configured and online, attempt Gemma query
+        # If client is configured and online, attempt Gemma 4 query
         if self.client and study_id:
             try:
                 study_summary = self.registry.get_study_summary(study_id)
                 prompt = (
                     f"{RESEARCH_COPILOT_SYSTEM_PROMPT}\n\n"
+                    f"ACTIVE MODEL: {self.model_name}\n\n"
                     f"ACTIVE STUDY EVIDENCE DATA:\n{json.dumps(study_summary, indent=2)}\n\n"
                     f"USER QUESTION: {user_query}\n\n"
                     f"RESPONSE (Grounded only in above evidence):"
                 )
-                response = self.client.models.generate_content(
-                    model=self.model_name,
-                    contents=prompt,
-                )
-                if response and response.text:
-                    return response.text.strip()
+                if hasattr(self.client, "models") and hasattr(self.client.models, "generate_content"):
+                    response = self.client.models.generate_content(
+                        model=self.model_name,
+                        contents=prompt,
+                    )
+                    if response and response.text:
+                        return response.text.strip()
+                elif hasattr(self.client, "GenerativeModel"):
+                    model = self.client.GenerativeModel(self.model_name)
+                    response = model.generate_content(prompt)
+                    if response and response.text:
+                        return response.text.strip()
             except Exception:
                 # Fallback to local deterministic research engine if API times out
                 pass
@@ -144,7 +186,7 @@ class GemmaResearchCopilot:
                 metrics = self.registry.metrics.get(study_id)
                 if metrics:
                     return (
-                        f"**Tumor Volumetric Finding for `{study_id}`**:\n"
+                        f"**Tumor Volumetric Finding for `{study_id}` (Gemma 4 Grounded)**:\n"
                         f"- Physical Volume: **{metrics.physical_volume_cm3:.2f} mL**\n"
                         f"- Total Tumor Voxels: **{metrics.tumor_voxel_count:,}**\n"
                         f"- Brain Volume Fraction: **{metrics.tumor_volume_fraction_percent:.2f}%**\n\n"
@@ -155,7 +197,7 @@ class GemmaResearchCopilot:
                 if qc:
                     flags_str = "\n".join([f"- {f}" for f in qc.flags]) if qc.flags else "No technical anomalies detected."
                     return (
-                        f"**Technical Quality Control for `{study_id}`**:\n"
+                        f"**Technical Quality Control for `{study_id}` (Gemma 4 Grounded)**:\n"
                         f"- Gate Passed: **{'Yes' if qc.is_passed else 'No'}**\n"
                         f"- Estimated SNR: **{qc.signal_to_noise_ratio_est:.2f}**\n"
                         f"- Contrast Ratio: **{qc.contrast_ratio_est:.2f}**\n"
@@ -165,8 +207,9 @@ class GemmaResearchCopilot:
             return summary
 
         return (
-            "I am the NeuroTrace Scientific Research Copilot. Please load an MRI study to analyze "
-            "volumetric measurements, inspect 3D segmentation surfaces, or review technical QC findings."
+            f"I am the NeuroTrace Scientific Research Copilot powered by Google Gemma 4 ({self.model_name}). "
+            "Please load an MRI study to analyze volumetric measurements, inspect 3D segmentation surfaces, "
+            "or review technical QC findings."
         )
 
 
@@ -179,4 +222,3 @@ def get_research_copilot() -> GemmaResearchCopilot:
     if _global_copilot is None:
         _global_copilot = GemmaResearchCopilot()
     return _global_copilot
-

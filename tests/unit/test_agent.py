@@ -95,3 +95,21 @@ def test_copilot_targeted_queries(populated_registry):
     assert "Technical Quality Control" in qc_reply
     assert "Gate Passed" in qc_reply
 
+
+
+def test_gemma4_model_selection_and_status(populated_registry):
+    """Verify Gemma 4 model support for gemma-4-31b-it and gemma-4-26b-a4b-it."""
+    copilot = GemmaResearchCopilot(tool_registry=populated_registry)
+
+    # Verify default model is gemma-4-31b-it
+    assert copilot.model_name == "gemma-4-31b-it"
+    status = copilot.get_copilot_status()
+    assert status["model_name"] == "gemma-4-31b-it"
+    assert "gemma-4-31b-it" in status["supported_models"]
+    assert "gemma-4-26b-a4b-it" in status["supported_models"]
+
+    # Verify switching to gemma-4-26b-a4b-it
+    copilot.set_model("gemma-4-26b-a4b-it")
+    assert copilot.model_name == "gemma-4-26b-a4b-it"
+    summary = copilot.synthesize_research_summary("study_test_001")
+    assert "gemma-4-26b-a4b-it" in summary

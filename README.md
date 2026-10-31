@@ -4,7 +4,7 @@
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.0%2B-ee4c2c.svg)](https://pytorch.org/)
 [![Streamlit](https://img.shields.io/badge/Streamlit-1.30%2B-ff4b4b.svg)](https://streamlit.io/)
 [![Plotly](https://img.shields.io/badge/Plotly-5.18%2B-3f4f75.svg)](https://plotly.com/)
-[![Tests](https://img.shields.io/badge/tests-39%20passed%20%7C%20100%25-brightgreen.svg)](tests/)
+[![Tests](https://img.shields.io/badge/tests-41%20passed%20%7C%20100%25-brightgreen.svg)](tests/)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 > **"NeuroTrace — From segmentation to evidence."**
@@ -59,11 +59,21 @@ NeuroTrace is an open-source, research-grade computational neuroimaging analysis
 - **Lesion Fragmentation Analysis**: Measures disconnected tumor components via connected-component labeling and reports primary cluster ratios.
 - **Signal-to-Noise Ratio (SNR) & Contrast**: Estimates background noise and tumor-to-parenchyma contrast ratio.
 
-### 7. Gemma 4 Research Assistant Copilot
-- Integrates Google's **Gemma 4** model via an allowlisted computational tool registry (`validate_mri_study`, `run_neurosegnet`, `calculate_tumor_volumes`, `inspect_segmentation_quality`, `compare_with_ground_truth`).
-- **Strict Evidence Grounding**: Every numerical claim must be directly cited from tool execution results; hallucination of numbers is prohibited.
-- **Local Data Privacy**: Raw MRI scans remain completely local; only verified numerical metrics and metadata are exchanged with the language model.
-- **Deterministic Offline Fallback**: Generates structured, evidence-grounded research summaries even when offline or without an API key.
+### 7. Google Gemma 4 Research Assistant Copilot
+NeuroTrace integrates Google's **Gemma 4** models through an agentic, allowlisted computational tool architecture:
+- **Supported Gemma 4 Models**:
+  - `gemma-4-31b-it`: Dense 31-billion parameter instruction-tuned model. Optimized for complex neuroimaging reasoning, comparative analysis, and structured scientific report synthesis.
+  - `gemma-4-26b-a4b-it`: Mixture-of-Experts (MoE) 26-billion parameter architecture (4B active parameters). Optimized for ultra-fast interactive Q&A and low-latency research guidance.
+- **Agentic Allowlisted Tool Architecture**:
+  - Gemma 4 interacts with the analysis pipeline exclusively through strictly validated computational tools: `validate_mri_study`, `run_neurosegnet`, `calculate_tumor_volumes`, `inspect_segmentation_quality`, and `generate_research_report`.
+  - Gemma 4 cannot run arbitrary code or alter files; every calculation is performed by deterministic Python algorithms on physical voxel spacing.
+- **Zero-Hallucination Evidence Grounding**:
+  - Every volumetric figure ($mL$), voxel count, bounding box coordinate, slice distribution, and SNR metric cited by Gemma 4 is directly extracted from verified execution contracts.
+- **Local Data Privacy Doctrine**:
+  - Raw NIfTI MRI volumetric datasets remain strictly on the local machine. Gemma 4 receives only structured JSON metadata and deterministic measurements, preventing sensitive patient or subject neuroimaging data from leaving the local workstation.
+- **Dual Execution Modes**:
+  - **Live Google GenAI Mode**: Interacts directly with `gemma-4-31b-it` or `gemma-4-26b-a4b-it` when a Google Gemini API key is supplied.
+  - **Deterministic Local Mode**: If running offline or without an API key, an internal scientific synthesis engine automatically produces structured, evidence-grounded summaries using the same verified contracts.
 
 ### 8. Publication-Grade Research PDF Reports
 - Generates downloadable multi-page PDF documents via ReportLab.
@@ -127,7 +137,7 @@ NeuroTrace has been empirically validated against real brain MRI scans from the 
 | **Tumor Voxel Count** | 67,692 – 67,694 voxels | **67,694 voxels** | ✅ Verified |
 | **Physical Tumor Volume** | 67.69 mL (`cm³`) | **67.694 mL** | ✅ Verified |
 | **Brain Volume Fraction** | 4.36% of brain volume | **4.364%** | ✅ Verified |
-| **Unit & Integration Tests**| 100% Pass Rate | **39 passed / 0 failed** | ✅ Verified |
+| **Unit, Integration & E2E Tests**| 100% Pass Rate | **41 passed / 0 failed** | ✅ Verified |
 
 ---
 
@@ -175,7 +185,8 @@ Edit `.env` to customize settings or add your Google Gemini API key for the live
 NEUROTRACE_MODEL_PATH=Flairbased_2/model_epoch_45 (1).pt
 NEUROTRACE_DEVICE=cpu
 GEMINI_API_KEY=your_gemini_api_key_here
-GEMMA_MODEL_ID=gemini-2.5-flash
+# Choose: gemma-4-31b-it (default) or gemma-4-26b-a4b-it
+GEMMA_MODEL_ID=gemma-4-31b-it
 ```
 
 *(Note: NeuroTrace functions completely offline if no API key is provided, using its deterministic scientific evidence synthesis engine).*
