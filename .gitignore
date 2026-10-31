@@ -22,7 +22,7 @@ ENV/
 *.h5
 *.hdf5
 Flairbased_2/
-models/
+models/*.h5
 
 # Protected Medical Imaging and Patient Data (Protected)
 *.nii
