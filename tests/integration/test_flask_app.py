@@ -81,3 +81,4 @@ def test_flask_load_sample_and_slice(client):
     assert rep_res.status_code == 200
     assert rep_res.content_type == "application/pdf"
     assert rep_res.data.startswith(b"%PDF")
+
